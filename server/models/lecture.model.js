@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const courseSchema = new mongoose.Schema(
+const lectureSchema = new mongoose.Schema(
   {
     lectureName: {
       type: String,
@@ -14,16 +14,10 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: [true, "Lecture Video is Required"],
     },
-    lectures: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "lectures",
-      },
-    ],
-    lectureOf: {
+    course: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "courses",
-      required:true
+      required: true,
     },
     length: {
       type: Number,
@@ -33,4 +27,4 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const CourseModel = mongoose.model("users", userSchema);
+export const LectureModel = mongoose.model("lectures", lectureSchema);
