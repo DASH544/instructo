@@ -11,13 +11,16 @@ export const fetchAllCourses = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 //zod validation
-const courseBody = z.object({
-  courseName: z.string().min(3).max(32),
-  courseDesc: z.string().min(3).max(128),
-  courseImg: z.url(),
-  price: z.number().min(499).max(9999),
-});
+const courseBody = z
+  .object({
+    courseName: z.string().min(3).max(32),
+    courseDesc: z.string().min(3).max(128),
+    courseImg: z.url(),
+    price: z.number().min(499).max(9999),
+  })
+  .strict();
 
 export const addCourse = async (req, res) => {
   try {
@@ -27,7 +30,6 @@ export const addCourse = async (req, res) => {
         field: item.path[0],
         message: item.message,
       }));
-
       return res.status(400).json({ error: validationError });
     }
     const { courseName, courseDesc, courseImg, price } = parsedBody.data;
@@ -72,6 +74,9 @@ export const editCourse = async (req, res) => {
       parsedBody.data,
       { new: true }
     );
+    if (!updatedCourse) {
+      return res.status(400).json({ message: "Course Not Found" });
+    }
     return res.status(200).json({ message: "Course Edited Successfully" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -105,12 +110,14 @@ export const deleteCourse = async (req, res) => {
   }
 };
 //zod validation
-const lectureBody = z.object({
-  lectureName: z.string().min(3).max(32),
-  lectureDesc: z.string().min(3).max(256),
-  lectureVideo: z.url(),
-  length: z.number(),
-});
+const lectureBody = z
+  .object({
+    lectureName: z.string().min(3).max(32),
+    lectureDesc: z.string().min(3).max(256),
+    lectureVideo: z.url(),
+    length: z.number(),
+  })
+  .strict();
 export const addLecture = async (req, res) => {
   try {
     const courseId = req.params.id;
@@ -137,6 +144,7 @@ export const addLecture = async (req, res) => {
     const lecture = await LectureModel.create({
       ...parsedBody.data,
       course: course._id,
+      createdBy: userId,
     });
     if (!lecture) {
       return res
@@ -149,4 +157,82 @@ export const addLecture = async (req, res) => {
   }
 };
 
-export const editLecture = async (req, res) => {};
+export const editLecture = async (req, res) => {
+  try {
+    const lectureId = req.params.id;
+    const userId = req.user;
+    if (!lectureId || !mongoose.Types.ObjectId.isValid(lectureId)) {
+      return res.status(404).json({ message: "Invalid Lecture Id" });
+    }
+    const lecture = await LectureModel.findById(lectureId);
+    if (!lecture) {
+      return res.status(404).json({ message: "Lecture Not Found" });
+    }
+    if (lecture.createdBy.toString() !== userId) {
+      return res.status(404).json({ message: "Unauthorized" });
+    }
+    const editLectureBody = lectureBody.partial();
+    const parsedBody = editLectureBody.safeParse(req.body);
+    if (!parsedBody.success) {
+      const validationError = parsedBody.error.issues.map((item) => ({
+        field: item.path[0],
+        message: item.message,
+      }));
+      return res.status(400).json({ error: validationError });
+    }
+    const updatedLecture = await LectureModel.findByIdAndUpdate(
+      lectureId,
+      parsedBody.data,
+      { new: true }
+    );
+    return res
+      .status(200)
+      .json({ message: "Lecture edited successfully", updatedLecture });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteLecture = async (req, res) => {
+  try {
+    const lectureId = req.params.id;
+    const userId = req.user;
+    if (!lectureId || !mongoose.Types.ObjectId.isValid(lectureId)) {
+      return res.status(404).json({ message: "Invalid Lecture Id" });
+    }
+    const lecture = await LectureModel.findOne({
+      _id: lectureId,
+      createdBy: userId,
+    });
+    if (!lecture) {
+      return res.status(404).json({ message: "Lecture Not Found" });
+    }
+    if (lecture.createdBy.toString() !== userId) {
+      return res.status(404).json({ message: "Unauthorized" });
+    }
+    const deletedLecture = await LectureModel.findByIdAndDelete(lectureId);
+    if (!deletedLecture) {
+      return res.status(404).json({ message: "Lecture Not Found" });
+    }
+    return res
+      .status(200)
+      .json({ message: "Lecture deleted successfully", deletedLecture });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+export const fetchAllLectures = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    if (!courseId || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid Course Id" });
+    }
+    const lectures = await LectureModel.find({ course: courseId });
+    if (!lectures) {
+      return res.status(404).json({ message: "Lectures Not Found" });
+    }
+    res.status(200).json({ lecturesArr: lectures });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};

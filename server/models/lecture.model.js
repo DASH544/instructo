@@ -19,6 +19,12 @@ const lectureSchema = new mongoose.Schema(
       ref: "courses",
       required: true,
     },
+    createdBy:
+    {
+      type:mongoose.Schema.Types.ObjectId,
+      ref:"users",
+      required:true
+    },
     length: {
       type: Number,
       required: true,

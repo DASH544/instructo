@@ -14,17 +14,13 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: [true, "Course Image is Required"],
     },
-    ownedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "users",
-    },
     price: {
       type: Number,
       required: true,
     },
     createdBy: {
-      type: String,
-      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
     },
   },
   { timestamps: true }
