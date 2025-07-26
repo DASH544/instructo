@@ -3,6 +3,7 @@ import { CourseModel } from "../models/course.model.js";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { LectureModel } from "../models/lecture.model.js";
+import { UserModel } from "../models/user.model.js";
 export const fetchAllCourses = async (req, res) => {
   try {
     const allCourses = await CourseModel.find();
@@ -11,7 +12,21 @@ export const fetchAllCourses = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
+export const getSingleCourse = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    if (!courseId || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(404).json({ message: "Invalid Course Id" });
+    }
+    const course = await CourseModel.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course Not Found" });
+    }
+    return res.status(200).json({ message: course });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 //zod validation
 const courseBody = z
   .object({
@@ -232,6 +247,32 @@ export const fetchAllLectures = async (req, res) => {
       return res.status(404).json({ message: "Lectures Not Found" });
     }
     res.status(200).json({ lecturesArr: lectures });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const buyCourse = async (req, res) => {
+  try {
+    const userId = req.user;
+    const courseId = req.params.id;
+    if (!courseId || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(404).json({ message: "Course Not Found" });
+    }
+    const course = await CourseModel.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course Not Found" });
+    }
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
+    if (user.subscription.includes(courseId)) {
+      return res.status(200).json({ message: "You already own this course" });
+    }
+    user.subscription.push(course);
+    await user.save();
+    res.status(200).json({ message: "Course Purchased Successfully" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
